@@ -1,0 +1,102 @@
+name: psadi-wezterm
+version: "latest"
+summary: A GPU-accelerated cross-platform terminal emulator
+description: |
+  WezTerm is a cross-platform terminal emulator and multiplexer written in Rust by @wez. It supports ligatures, color emoji, hyperlinks, mouse and scrollback, and runs on Linux, macOS, Windows 10, and FreeBSD.
+
+website: https://wezfurlong.org/wezterm/index.html
+source-code: https://github.com/wez/wezterm
+adopt-info: wezterm
+donation:
+  - https://github.com/sponsors/wez
+  - https://www.patreon.com/WezFurlong
+  - https://ko-fi.com/wezfurlong
+  - https://liberapay.com/wez
+
+base: core24
+grade: stable
+confinement: classic
+compression: lzo
+
+parts:
+  wezterm:
+    plugin: rust
+    source: https://github.com/wez/wezterm.git
+    build-packages:
+      - bsdutils
+      - cmake
+      - dpkg-dev
+      - fakeroot
+      - g++
+      - gcc
+      - libegl1-mesa-dev
+      - libfontconfig1-dev
+      - libssl-dev
+      - libwayland-dev
+      - libx11-6
+      - libx11-xcb-dev
+      - libxcb-ewmh-dev
+      - libxcb-icccm4-dev
+      - libxcb-image0-dev
+      - libxcb-keysyms1-dev
+      - libxcb-randr0-dev
+      - libxcb-render0-dev
+      - libxcb-util-dev
+      - libxcb-xkb-dev
+      - libxkbcommon-dev
+      - libxkbcommon-x11-dev
+      - lsb-release
+      - python3
+      - xdg-utils
+      - xorg-dev
+    stage-packages:
+      - libegl1
+      - libfontconfig1
+      - libwayland-client0
+      - libwayland-egl1
+      - libx11-6
+      - libx11-xcb1
+      - libxau6
+      - libxcb-image0
+      - libxcb-shm0
+      - libxcb-util1
+      - libxcb-xkb1
+      - libxcb1
+      - libxdmcp6
+      - libxkbcommon-x11-0
+    build-attributes:
+      - enable-patchelf
+    override-build: |
+      craftctl default
+      cargo build --release --features distro-defaults
+
+      # Prepare directories and copy binaries
+      mkdir -p $CRAFT_PART_INSTALL/{usr,etc}
+      mkdir -p $CRAFT_PART_INSTALL/etc/{bash_completion.d,profile.d}
+      mkdir -p $CRAFT_PART_INSTALL/usr/share/{applications,icons,metainfo}
+      mkdir -p $CRAFT_PART_INSTALL/usr/share/nautilus-python/extensions
+      mkdir -p $CRAFT_PART_INSTALL/usr/share/terminfo/w
+      mkdir -p $CRAFT_PART_INSTALL/usr/share/zsh/site-functions
+
+      # Copy files and assets
+      cp assets/open-wezterm-here $CRAFT_PART_INSTALL
+
+      # Copy icons, completion files, and other assets
+      cp assets/icon/terminal.png $CRAFT_PART_INSTALL/usr/share/icons/wezterm.png
+      cp assets/shell-completion/bash $CRAFT_PART_INSTALL/etc/bash_completion.d/wezterm
+      cp assets/shell-completion/zsh $CRAFT_PART_INSTALL/usr/share/zsh/site-functions/_wezterm
+      cp assets/shell-integration/* $CRAFT_PART_INSTALL/etc/profile.d
+      cp assets/wezterm-nautilus.py $CRAFT_PART_INSTALL/usr/share/nautilus-python/extensions
+      cp assets/wezterm.appdata.xml $CRAFT_PART_INSTALL/usr/share/metainfo
+      cp assets/wezterm.desktop $CRAFT_PART_INSTALL/usr/share/applications/psadi-wezterm.desktop
+      cp termwiz/data/wezterm.terminfo $CRAFT_PART_INSTALL/usr/share/terminfo/w/wezterm
+
+      sed -i 's|Icon=.*|Icon=${SNAP}/usr/share/icons/wezterm.png|g' \
+        $CRAFT_PART_INSTALL/usr/share/applications/psadi-wezterm.desktop
+
+apps:
+  wezterm:
+    command: wezterm
+    completer: etc/bash_completion.d/wezterm
+    desktop: usr/share/applications/psadi-wezterm.desktop
+    common-id: com.psadi.wezterm
